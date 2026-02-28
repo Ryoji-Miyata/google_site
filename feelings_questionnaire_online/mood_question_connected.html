@@ -193,7 +193,7 @@
         questions.forEach((q, i) => questionnaireContainer.appendChild(createQuestionElement(q, i)));
         startBtn.onclick = () => { introContainer.classList.remove('active'); questionnaireContainer.classList.add('active'); document.getElementById('q-0').classList.add('active'); };
         csvBtn.onclick = downloadCSV;
-        homeBtn.onclick = () => { window.location.href = 'https://sites.google.com/view/ryojimiyata/home?authuser=0'; }; // Go back to portfolio root
+        homeBtn.onclick = () => { window.location.href = 'https://sites.google.com/view/ryojimiyata/home'; }; // Go back to portfolio root
 
         introContainer.classList.add('active');
     });
@@ -201,3 +201,4 @@
 </body>
 
 </html>
+
