@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Go/No-Go Task (Demo)</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <script src="https://unpkg.com/jspsych@7.3.4"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.1.3"></script>
+  <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet" type="text/css" />
+  
+  <style>
+    /* 白背景・中央配置の基本スタイル */
+    html, body { 
+      height: 100%; margin: 0; padding: 0; overflow: hidden; 
+      background-color: #ffffff; font-family: -apple-system, sans-serif; 
+    }
+    .jspsych-display-element { 
+      height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; 
+    }
+    /* 刺激（数字）のサイズ */
+    .task-stimulus { font-weight: bold; font-size: 25vh; color: #333; }
+    /* 説明文のスタイル */
+    .main-text { max-width: 90%; text-align: left; font-size: 1.1rem; line-height: 1.6; }
+    
+    /* ボタンの共通スタイル */
+    .jspsych-btn { 
+      font-size: 1.1rem !important; padding: 12px 25px !important; 
+      margin: 10px !important; border-radius: 8px !important; font-weight: bold !important;
+      cursor: pointer; border: none !important; color: white !important;
+      background-color: #3498db !important; /* デフォルトは青 */
+    }
+
+    /* 終了画面のボタン色分け（CSSで制御することでJSエラーを回避） */
+    #jspsych-html-button-response-btm button:nth-child(1) { background-color: #e67e22 !important; } /* Download: オレンジ */
+    #jspsych-html-button-response-btm button:nth-child(2) { background-color: #3498db !important; } /* Return: 青 */
+
+    /* 結果表示用テーブル */
+    #result-table { margin: 20px auto; border-collapse: collapse; width: 300px; text-align: left; }
+    #result-table td { padding: 10px; border-bottom: 1px solid #eee; font-size: 1.1rem; }
+  </style>
+</head>
+<body></body>
+<script>
+// jsPsychの初期化
+var jsPsych = initJsPsych();
+
+function startTask() {
+    var timeline = [];
+
+    // 1. Welcome
+    timeline.push({ 
+        type: jsPsychHtmlButtonResponse, 
+        stimulus: '<div style="text-align:center;"><h1>Go/No-Go Task</h1><p>Cognitive Assessment Performance Demo</p></div>', 
+        choices: ['Next']
+    });
+
+    // 2. Instructions (English)
+    timeline.push({ 
+        type: jsPsychHtmlButtonResponse, 
+        stimulus: '<div class="main-text"><p>When any number appears, tap <strong>anywhere</strong> on the screen as fast as possible.</p><p style="margin-top: 30px;">EXCEPTION: If the number is <strong style="color: red; font-size: 1.4em;">3</strong>, <br><strong style="color: red;">DO NOT TAP</strong> anything.</p></div>', 
+        choices: ['I Understand']
+    });
+
+    // 3. Ready signal
+    timeline.push({ 
+        type: jsPsychHtmlButtonResponse, 
+        stimulus: '<h1>Ready?</h1>', 
+        choices: ['Start Task']
+    });
+
+    timeline.push({ 
+        type: jsPsychHtmlKeyboardResponse, 
+        stimulus: '<p style="font-size: 48px; color: #2ecc71;">START</p>', 
+        choices: "NO_KEYS", 
+        trial_duration: 1200 
+    });
+
+    // 4. Task Procedure (20 trials)
+    var num_trials = 20;
+    var trials_vars = [];
+    for(var i = 0; i < num_trials; i++) {
+        if(i < 5) { // 25% No-Go (3)
+            trials_vars.push({ content: 3, type: 'nogo' });
+        } else {
+            var go_nums = [0,1,2,4,5,6,7,8,9];
+            var random_go = go_nums[Math.floor(Math.random() * go_nums.length)];
+            trials_vars.push({ content: random_go, type: 'go' });
+        }
+    }
+    var test_procedure = jsPsych.randomization.shuffle(trials_vars);
+
+    var fixation = { 
+        type: jsPsychHtmlKeyboardResponse, 
+        stimulus: '<div class="task-stimulus" style="color:#ccc;">+</div>', 
+        choices: "NO_KEYS", 
+        trial_duration: 600 
+    };
+    
+    var stimulus_trial = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: function(){ return '<div class="task-stimulus">' + jsPsych.timelineVariable('content') + '</div>'; },
+        choices: "NO_KEYS",
+        data: function(){
+            return { task: 'response', stimulus_type: jsPsych.timelineVariable('type') };
+        },
+        on_load: function() {
+            var start_time = performance.now();
+            var display = jsPsych.getDisplayElement();
+            
+            var handleTap = function(e) {
+                e.preventDefault();
+                var rt = Math.round(performance.now() - start_time);
+                display.removeEventListener('mousedown', handleTap);
+                display.removeEventListener('touchstart', handleTap);
+                jsPsych.finishTrial({ rt: rt, tapped: true });
+            };
+
+            var timeout = setTimeout(function() {
+                display.removeEventListener('mousedown', handleTap);
+                display.removeEventListener('touchstart', handleTap);
+                jsPsych.finishTrial({ rt: null, tapped: false });
+            }, 500); // 反応制限時間 500ms
+
+            display.addEventListener('mousedown', handleTap);
+            display.addEventListener('touchstart', handleTap);
+            jsPsych.getCurrentTrial().timeout_id = timeout;
+        },
+        on_finish: function(data){
+            clearTimeout(jsPsych.getCurrentTrial().timeout_id);
+            // 正誤判定
+            if(data.stimulus_type === 'go'){
+                data.correct = data.tapped ? 1 : 0;
+            } else {
+                data.correct = data.tapped ? 0 : 1;
+            }
+        }
+    };
+
+    timeline.push({
+        timeline: [fixation, stimulus_trial],
+        timeline_variables: test_procedure
+    });
+
+    // 5. Final Result Screen
+    var final_screen = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: function() {
+            var all_data = jsPsych.data.get().filter({task: 'response'});
+
+            // 【重要】平均反応時間の計算: Go刺激 ＋ 正解 ＋ 反応抜け(null)を除外
+            var go_correct_trials = all_data.filterCustom(function(trial){
+                return trial.stimulus_type === 'go' && 
+                       trial.correct === 1 && 
+                       trial.rt !== null;
+            });
+            var avg_rt = Math.round(go_correct_trials.select('rt').mean()) || 0;
+            
+            // Commission Error Rateの計算: No-Go刺激(3)でタップした割合
+            var nogo_trials = all_data.filter({stimulus_type: 'nogo'});
+            var nogo_count = nogo_trials.count();
+            var commission_errors = nogo_trials.filter({correct: 0}).count();
+            var commission_rate = nogo_count > 0 ? Math.round((commission_errors / nogo_count) * 100) : 0;
+
+            // 文字列結合でHTMLを作成（バッククォート・$エラーを完全回避）
+            var out = '<div style="text-align:center;">';
+            out += '<h1 style="color: #2ecc71;">Demo Completed!</h1>';
+            out += '<p>Performance Results:</p>';
+            out += '<table id="result-table">';
+            out += '<tr><td>Mean RT (Go):</td><td style="text-align:right; font-weight:bold;">' + avg_rt + ' ms</td></tr>';
+            out += '<tr><td>Commission Error Rate:</td><td style="text-align:right; font-weight:bold;">' + commission_rate + ' %</td></tr>';
+            out += '</table>';
+            out += '<p style="font-size:0.9rem; color:#666; margin-top:20px;">*Mean RT excludes omission errors (missed Go trials).</p>';
+            out += '</div>';
+            return out;
+        },
+        choices: ['Download Results (CSV)', 'Return to Portfolio'],
+        button_html: '<button class="jspsych-btn">%choice%</button>',
+        on_finish: function(data) {
+            if (data.response === 0) {
+                var csv = jsPsych.data.get().filter({task: 'response'}).csv();
+                var blob = new Blob([csv], { type: 'text/csv' });
+                var a = document.createElement('a');
+                a.href = window.URL.createObjectURL(blob);
+                a.download = 'gonogo_results.csv';
+                a.click();
+            } else {
+                window.location.href = '../';
+            }
+        }
+    };
+
+    // CSVダウンロード後に画面を維持するためのループ
+    var final_loop = {
+        timeline: [final_screen],
+        loop_function: function(data) {
+            return data.values()[0].response === 0;
+        }
+    };
+
+    timeline.push(final_loop);
+
+    // 実行開始
+    jsPsych.run(timeline);
+}
+
+// プログラム起動
+startTask();
+</script>
+</html>

@@ -1,0 +1,9 @@
+﻿FrameType_mixed,stimulus_mixed,file_path_mixed,correct_answer_mixed,block_type_mixed,stimulus_number_mixed,congruency
+Blue,Blue_BIGH_h,stimulus/Blue_BIGH_h.png,2,mixed,1,0
+Blue,Blue_BIGH_s,stimulus/Blue_BIGH_s.png,2,mixed,2,1
+Blue,Blue_BIGS_h,stimulus/Blue_BIGS_h.png,1,mixed,3,1
+Blue,Blue_BIGS_s,stimulus/Blue_BIGS_s.png,1,mixed,4,0
+Green,Green_BIGH_h,stimulus/Green_BIGH_h.png,2,mixed,5,0
+Green,Green_BIGH_s,stimulus/Green_BIGH_s.png,1,mixed,6,1
+Green,Green_BIGS_h,stimulus/Green_BIGS_h.png,2,mixed,7,1
+Green,Green_BIGS_s,stimulus/Green_BIGS_s.png,1,mixed,8,0

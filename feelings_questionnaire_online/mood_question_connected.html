@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Mood & Mind-Wandering Survey (Demo)</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f4f4f9; color: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        #questionnaire-wrapper { width: 100%; max-width: 600px; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); text-align: center; }
+        h1 { color: #2c3e50; margin-bottom: 20px; font-size: clamp(1.2rem, 5vw, 1.8rem); }
+        .info-text { font-size: clamp(0.9rem, 3.1vw, 1.1rem); color: #2c3e50; line-height: 1.6; margin-bottom: 20px; }
+        .question { display: none; animation: fadeIn 0.5s ease-in-out; }
+        .question.active { display: block; }
+        .question p { font-size: clamp(1.1rem, 4.5vw, 1.3rem); margin-bottom: 30px; color: #34495e; font-weight: 500; line-height: 1.4; }
+        
+        /* Slider Styles */
+        .slider-container { margin: 20px 0; }
+        .slider-labels { display: flex; justify-content: space-between; align-items: center; font-size: 0.85em; color: #7f8c8d; margin-bottom: 15px; }
+        .slider-value-display { font-size: 1.8rem; font-weight: bold; color: #3498db; min-width: 40px; text-align: center; }
+        input[type="range"] { width: 100%; cursor: pointer; height: 10px; border-radius: 5px; background: #dfe6e9; outline: none; -webkit-appearance: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 25px; height: 25px; border-radius: 50%; background: #3498db; cursor: pointer; }
+
+        /* Button Styles */
+        .btn { border: none; padding: 15px 25px; font-size: 1.1em; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-weight: bold; width: 100%; max-width: 300px; margin: 10px auto; display: block; }
+        .confirm-btn { background-color: #3498db; color: #fff; margin-top: 20px; }
+        .confirm-btn:disabled { background-color: #bdc3c7; cursor: not-allowed; opacity: 0.7; }
+        .action-btn { background-color: #2ecc71; color: #fff; }
+        .download-btn { background-color: #e67e22; color: #fff; }
+        .back-btn { background-color: #95a5a6; color: #fff; text-decoration: none; display: inline-block; line-height: 1.2; }
+        
+        /* Grid for Options */
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .option-btn { border: 2px solid #3498db; background-color: #fff; color: #3498db; padding: 15px; font-size: 1.1em; cursor: pointer; border-radius: 8px; font-weight: bold; }
+        .option-btn:hover { background-color: #3498db; color: #fff; }
+        .option-btn.full-width { grid-column: 1 / -1; }
+
+        #intro-container, #questionnaire-container, #result-container { display: none; }
+        #intro-container.active, #questionnaire-container.active, #result-container.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div id="questionnaire-wrapper">
+    <h1>State Assessment Tool</h1>
+    
+    <div id="intro-container">
+        <p class="info-text">
+            This is a demo of the <strong>Experience Sampling Questionnaire</strong>.<br><br>
+            Please recall the moment just before you received the notification and answer intuitively.
+        </p>
+        <button id="start-btn" class="btn action-btn">Start Demo</button>
+    </div>
+
+    <div id="questionnaire-container"></div>
+
+    <div id="result-container">
+        <p id="result-message" class="info-text"></p>
+        <div id="final-actions">
+            <button id="csv-btn" class="btn download-btn">Download Results (CSV)</button>
+            <button id="home-btn" class="btn back-btn">Return to Portfolio</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const introContainer = document.getElementById('intro-container');
+        const startBtn = document.getElementById('start-btn');
+        const questionnaireContainer = document.getElementById('questionnaire-container');
+        const resultContainer = document.getElementById('result-container');
+        const resultMessage = document.getElementById('result-message');
+        const csvBtn = document.getElementById('csv-btn');
+        const homeBtn = document.getElementById('home-btn');
+
+        // Academic terminology for Mood & Mind-Wandering (MW)
+        const questions = [
+            { key: 'mw_task_unrelated', label: 'To what extent were you thinking about things unrelated to what you were doing?', type: 'scale' },
+            { key: 'mw_external_awareness', label: 'To what extent was your attention directed toward your surroundings?', type: 'scale' },
+            { key: 'mw_thought_dynamics', label: 'To what extent were your thoughts shifting rapidly from one thing to another?', type: 'scale' },
+            { key: 'mw_concentration_effort', label: 'To what extent were you trying to concentrate on what you were doing?', type: 'scale' },
+            { key: 'pleased', label: 'How "Pleased" were you feeling?', type: 'scale' }, 
+            { key: 'sad', label: 'How "Sad" were you feeling?', type: 'scale' },
+            { key: 'tense', label: 'How "Tense" were you feeling?', type: 'scale' }, 
+            { key: 'relaxed', label: 'How "Relaxed" were you feeling?', type: 'scale' },
+            { key: 'annoyed', label: 'How "Annoyed" were you feeling?', type: 'scale' },
+            { key: 'sleepy', label: 'How "Sleepy" were you feeling?', type: 'scale' }, 
+            { key: 'stressed', label: 'Level of psychological stress:', type: 'scale' },
+            { key: 'new_stressor', label: 'Have you experienced any new stressors since the last report?', type: 'options', 
+              options: [{text: 'Yes', value: 1}, {text: 'No', value: 0}] },
+            { key: 'stressor_timing', label: 'When did the stressor occur?', type: 'options', condition: { key: 'new_stressor', value: 1 }, 
+              options: [
+                  {text: 'Within 10m', value: 1}, 
+                  {text: 'Within 30m', value: 2}, 
+                  {text: 'Within 1h', value: 3}, 
+                  {text: 'More than 2h ago', value: 5}
+              ] 
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        const answers = {};
+        
+        function createQuestionElement(q, index) {
+            const div = document.createElement('div');
+            div.className = 'question';
+            div.id = `q-${index}`;
+            const p = document.createElement('p');
+            p.textContent = q.label;
+            div.appendChild(p);
+
+            if (q.type === 'scale') {
+                const container = document.createElement('div');
+                container.className = 'slider-container';
+                container.innerHTML = `
+                    <div class="slider-labels">
+                        <span>Not at all</span>
+                        <span class="slider-value-display" id="val-${index}">5</span>
+                        <span>Extremely</span>
+                    </div>
+                    <input type="range" min="0" max="10" value="5" id="slider-${index}">
+                    <button class="btn confirm-btn" id="btn-${index}" disabled>Confirm</button>
+                `;
+                div.appendChild(container);
+                
+                const slider = div.querySelector('input');
+                const valDisp = div.querySelector('.slider-value-display');
+                const btn = div.querySelector('.confirm-btn');
+                
+                slider.oninput = () => { valDisp.textContent = slider.value; btn.disabled = false; };
+                btn.onclick = () => selectAnswer(q.key, slider.value);
+            } else if (q.type === 'options') {
+                const grid = document.createElement('div');
+                grid.className = 'options-grid';
+                q.options.forEach(opt => {
+                    const b = document.createElement('button');
+                    b.className = 'option-btn';
+                    b.textContent = opt.text;
+                    b.onclick = () => selectAnswer(q.key, opt.value);
+                    grid.appendChild(b);
+                });
+                div.appendChild(grid);
+            }
+            return div;
+        }
+
+        function selectAnswer(key, value) {
+            answers[key] = value;
+            const currentEl = document.getElementById(`q-${currentQuestionIndex}`);
+            currentEl.classList.remove('active');
+            currentQuestionIndex++;
+            showNextQuestion();
+        }
+
+        function showNextQuestion() {
+            if (currentQuestionIndex >= questions.length) {
+                showFinalScreen();
+                return;
+            }
+            const nextQ = questions[currentQuestionIndex];
+            if (nextQ.condition && answers[nextQ.condition.key] !== nextQ.condition.value) {
+                currentQuestionIndex++;
+                showNextQuestion();
+                return;
+            }
+            const nextEl = document.getElementById(`q-${currentQuestionIndex}`);
+            if(nextEl) nextEl.classList.add('active');
+        }
+
+        function showFinalScreen() {
+            questionnaireContainer.classList.remove('active');
+            resultContainer.classList.add('active');
+            resultMessage.innerHTML = `
+                <strong style="color:#2ecc71; font-size:1.4em;">Demo Completed!</strong><br><br>
+                Thank you for testing the tool. In the actual research version, these data are securely transmitted to a server for analysis.<br><br>
+                <small>No data has been saved during this demo session.</small>
+            `;
+        }
+
+        function downloadCSV() {
+            let csv = "Question_Key,Response_Value\n";
+            csv += `timestamp,${new Date().toISOString()}\n`;
+            Object.entries(answers).forEach(([k, v]) => { csv += `${k},${v}\n`; });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `survey_results.csv`);
+            a.click();
+        }
+
+        // Setup
+        questions.forEach((q, i) => questionnaireContainer.appendChild(createQuestionElement(q, i)));
+        startBtn.onclick = () => { introContainer.classList.remove('active'); questionnaireContainer.classList.add('active'); document.getElementById('q-0').classList.add('active'); };
+        csvBtn.onclick = downloadCSV;
+        homeBtn.onclick = () => { window.location.href = '../'; }; // Go back to portfolio root
+
+        introContainer.classList.add('active');
+    });
+</script>
+</body>
+</html>
