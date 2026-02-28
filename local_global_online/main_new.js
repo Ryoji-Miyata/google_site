@@ -153,7 +153,7 @@ async function startExperiment() {
                 a.download = 'local_global_cleaned_data.csv';
                 a.click();
             } else {
-                window.location.href = 'https://sites.google.com/view/ryojimiyata/home?authuser=0';
+                window.location.href = 'https://sites.google.com/view/ryojimiyata/home';
             }
         }
     };
@@ -218,3 +218,4 @@ function createTimelineVariables(data) {
 
 
 startExperiment();
+
